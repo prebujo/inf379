@@ -192,9 +192,8 @@ function o1 = operator1(ini_sol, C, V)
                 continue;
             else
                 while(call ~= 0)
-                    choice = randi(2);
-                    if(choice == 1)
-                        
+                    options(2) = call;
+                    
                     
                     i = i+1;
                     call = ini_sol(1,i);
