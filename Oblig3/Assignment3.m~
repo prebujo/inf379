@@ -177,6 +177,8 @@ function o = operator(operator, ini_sol, C,V)
             new_sol = operator3(ini_sol, C, V);
         case 3
             new_sol = operator4(ini_sol, C, V);
+        case 4
+            new_sol = operator5(ini_sol, C, V);
         otherwise
             new_sol = 0;
     end
@@ -185,7 +187,10 @@ end
 
 %__________________________________________________________________________
 %OPERATOR 1
-%Operator to move one random call from one vehicle to another random vehicle.
+%Operator to move one random call from one vehicle to another random 
+%vehicle. Operator selects a call to move to a new vehicle and makes
+%pickup/delivery schedule with one and one element from either new call or
+%old schedule with 50% probablility until all elements are done.
 
 function o1 = operator1(ini_sol, C, V)
     idx = 2*C + V;
@@ -276,17 +281,14 @@ function o1 = operator1(ini_sol, C, V)
             curr_veh = curr_veh+1;            
         else
             call = ini_sol(1,i);
-            if(call == call_choice)
-                i = i+1;
-            elseif(call==0)
+            if(call==0)
                 curr_veh = curr_veh +1;
-                i = i+1;
                 new_idx = new_idx+1;
-            else
+            elseif(call~= call_choice)
                 new_sol(1,new_idx) = ini_sol(1,i);
-                i = i+1;
                 new_idx = new_idx+1;
             end
+            i = i+1;
         end        
     end
     o1=new_sol;
@@ -544,21 +546,16 @@ function o5 = operator5(ini_sol, C, V)
             curr_veh = curr_veh-1;            
         else
             call = ini_sol(1,i);
-            if(call == call_choice)
-                i = i-1;
-            elseif(call==0)
+            if(call==0)
                 curr_veh = curr_veh -1;
-                i = i-1;
                 new_idx = new_idx-1;
-            else
+            elseif(call~= call_choice)
                 new_sol(1,new_idx) = ini_sol(1,i);
-                i = i+1;
-                new_idx = new_idx+1;
+                new_idx = new_idx-1;
             end
+            i = i-1;
         end        
     end
-    disp(ini_sol);
-    disp(new_sol);
     o5=new_sol;
 end
 
@@ -639,6 +636,118 @@ end
 
 %__________________________________________________________________________
 
+%__________________________________________________________________________
+%OPERATOR 7
+%Operator to move one random call from one vehicle to another random 
+%vehicle. Call pickup and delivery are randomly inserted into the new
+%vehicle.
+
+function o7 = operator7(ini_sol, C, V)
+    idx = 2*C + V;
+    call_choice = 0;
+    
+    %choosing randomly a non zero call from the initial solution
+    while(call_choice==0)
+        call_choice = ini_sol(1,randi(idx));
+    end
+    
+    %the following section finds the vehicle belonging to the chosen call
+    veh_choice = 1;
+    for i = 1:idx
+        call = ini_sol(1,i);
+        if(call == call_choice)
+            break;
+        elseif(call == 0)
+            veh_choice = veh_choice +1;
+        end        
+    end
+    
+    %As all calls are assigned to dummy in initial solution I am not
+    %including dummy vehicle as an option here. This might lock possible
+    %solutions if i dont include other operators to move a route back to
+    %random, I will consider changing this. Since I could theoretically end up
+    %picking a call from a vehicle and moving it to itsself i am doing a 
+    %while loop until that is not the case. tatt med dummy også..
+    new_veh = veh_choice;
+    while(new_veh == veh_choice)
+        new_veh = randi(V+1);
+    end
+    
+    %generating new solution vector
+    new_sol = zeros(1,idx);
+    new_idx = 1;
+    curr_veh = 1;
+    opt_idx = 0;
+    i = 1;
+    while(i<=idx||new_idx<=idx)
+        if(curr_veh == new_veh)
+            if(i>idx)
+                call = 0;
+            else
+                call = ini_sol(1,i);
+            end
+            if(call == 0) %if the vehicle has no other calls,
+                new_sol(1,new_idx) = call_choice; % I will set the vehicle
+                new_sol(1,new_idx+1) = call_choice; %to pick up and deliver
+                new_idx = new_idx +2;  %the chosen call.
+            else
+                k = i;
+                while(call ~=0)
+                    opt_idx = opt_idx+1;
+                    k = k+1;
+                    if(k>idx)
+                        call = 0;
+                    else
+                        call = ini_sol(1,k);
+                    end
+                end
+                %setting random indexes in the vehicles schedule (now
+                %increased with 2 because of new call
+                pickupat = new_idx+ randi(opt_idx +2)-1;
+                deliveryat = pickupat;
+                while(pickupat == deliveryat)
+                    deliveryat = new_idx+ randi(opt_idx +2)-1;
+                end
+                
+                %setting the calls pickup and delivery.
+                new_sol(1,pickupat) = call_choice;
+                new_sol(1,deliveryat) = call_choice;
+                
+                %setting the rest of the schedule.
+                c = 2;
+                while(i < k)
+                    if(new_idx==pickupat||new_idx==deliveryat)
+                        new_idx = new_idx+1;
+                        c = c-1;
+                    else
+                        new_sol(1,new_idx)=ini_sol(1,i);
+                        new_idx = new_idx+1;
+                        i = i+1;
+                    end
+                end
+                new_idx = new_idx + c;
+            end
+            i = i+1;
+            new_idx = new_idx+1;
+            curr_veh = curr_veh+1;            
+        else
+            call = ini_sol(1,i);
+            if(call==0)
+                curr_veh = curr_veh +1;
+                new_idx = new_idx+1;
+            elseif(call~= call_choice)
+                new_sol(1,new_idx) = ini_sol(1,i);
+                new_idx = new_idx+1;
+            end
+            i =i+1;
+        end        
+    end
+    o7=new_sol;
+end
+
+
+
+%__________________________________________________________________________
 
 %__________________________________________________________________________
 %FEASIBILITY CHECKS
