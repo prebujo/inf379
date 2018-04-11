@@ -7,7 +7,7 @@ formatCSpec = '%d,%d,%d,%d,%d,%d,%d,%d,%d\n';
 formatRSpec = '%d,%d,%d,%d,%d\n';
 formatLSpec = '%d,%d,%d,%d,%d,%d\n';
 
-fileID = fopen('/home/preben/repo/inf379/Oblig3/Call_007_Vehicle_03.txt');
+fileID = fopen('/home/preben/repo/inf379/Oblig3/Call_035_Vehicle_07.txt');
 fgetl(fileID);
 %setting amount of Nodes from file
 N = fscanf(fileID, '%d\n',1);
@@ -73,6 +73,9 @@ s=10;
 %timing the run;
 ttime = 0;
 
+%best solution
+best_sol = zeros(1,2*C+V);
+best_obj = 999999999;
 
 for j = 1:s
     %choosing a seed for this run.
@@ -105,7 +108,7 @@ for j = 1:s
         %running the operator function with a random number using randi.
         %always using one of 3 operator functions. Getting a new solution
         %in return that i will then precede to check for feasibility
-        new_sol = operator(randi(3), ini_sol, C, V);
+        new_sol = operator(randi(4), ini_sol, C, V);
         T0 = 1000000;
         Tf = 1;
         T=T0-i*((T0-Tf)/n);
@@ -115,6 +118,10 @@ for j = 1:s
         %if feasible, update initial solution
         if(feas)
             new_obj = obj_func(new_sol, vehicle_spec, route_spec, call_spec, load_spec, V, C, N);
+            if(new_obj < best_obj)
+                best_sol = new_sol;
+                best_obj = new_obj;
+            end                
             if(new_obj < ini_obj)
                 ini_obj = new_obj;
                 ini_sol = new_sol;
@@ -130,16 +137,13 @@ for j = 1:s
     end
     ttime = ttime + toc(tstart);
     %storing result..
-    results(1,j+1) = ini_obj;
+    results(1,j+1) = best_obj;
     
     
 end
 
-%storing sum for average..
-results(1,2+s) = results(1,2+s)+ini_obj;
-
 %calculating average..
-results(1,2+s) = sum(results(1,2:s+1))/10;
+results(1,2+s) = sum(results(1,2:s+1))/s;
 
 %storing average improvement
 a(1,1:s) = results(1,1);
@@ -160,7 +164,7 @@ results(1,6+s) = ttime/s;
     
     
     
-clearvars -except vehicle_spec call_spec route_spec load_spec V C veh_call N ini_sol ini_obj results a b c d
+clearvars -except vehicle_spec call_spec route_spec load_spec V C veh_call N ini_sol ini_obj results best_obj best_sol
 
 %END OF MAIN PROGRAM
 %__________________________________________________________________________
@@ -172,13 +176,15 @@ clearvars -except vehicle_spec call_spec route_spec load_spec V C veh_call N ini
 function o = operator(operator, ini_sol, C,V)
     switch operator
         case 1
-            new_sol = operator1(ini_sol, C, V);
+            new_sol = operator7(ini_sol, C, V);
         case 2
             new_sol = operator3(ini_sol, C, V);
         case 3
             new_sol = operator4(ini_sol, C, V);
         case 4
             new_sol = operator5(ini_sol, C, V);
+        case 5
+            new_sol = operator5(ini_sol,C,V);
         otherwise
             new_sol = 0;
     end
