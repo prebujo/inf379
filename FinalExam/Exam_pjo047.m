@@ -1,171 +1,190 @@
 %__________________________________________________________________________
 %IMPORT DATA SECTION
 
-%formats needed for import
-formatVSpec = '%d,%d,%d,%d\n';
-formatCSpec = '%d,%d,%d,%d,%d,%d,%d,%d,%d\n';
-formatRSpec = '%d,%d,%d,%d,%d\n';
-formatLSpec = '%d,%d,%d,%d,%d,%d\n';
 
-fileID = fopen('Call_007_Vehicle_03.txt');
-fgetl(fileID);
-%setting amount of Nodes from file
-N = fscanf(fileID, '%d\n',1);
-fgetl(fileID);
-%setting amount of Vehicles from file
-V = fscanf(fileID, '%d\n',1);
-fgetl(fileID);
-%reading the vehicle specifications from file
-size_veh = [4,V];
-vehicle_spec =  fscanf(fileID, formatVSpec, size_veh);
-fgetl(fileID);
-%reading the amount of calls from file
-C = fscanf(fileID, '%d\n',1);
-fgetl(fileID);
-%importing calls per vehicle
-veh_call = zeros(V,C+1);
-for i= 1:V
-    var = fgetl(fileID);
-    var = var + ",";
-    numbers = sscanf(var,'%d,');
-    for j=1:length(numbers)
-        veh_call(i,j) = numbers(j);
+%section to open files for the runs
+fileNames = ["Call_007_Vehicle_03.txt","Call_018_Vehicle_05.txt","Call_035_Vehicle_07.txt","Call_080_Vehicle_20.txt","Call_130_Vehicle_40.txt"];
+fileTable(1,1) = fopen(fileNames(1));
+fileTable(1,2) = fopen(fileNames(2));
+fileTable(1,3) = fopen(fileNames(3));
+fileTable(1,4) = fopen(fileNames(4));
+fileTable(1,5) = fopen(fileNames(5));
+
+%starting seed and amount of runs (all using different seeds) 
+%seed = 41;
+%runs = 10;
+
+files = 2;
+results = zeros(files,runs+6);
+
+for f = 1:files
+    fileID = fileTable(1,f);
+    %formats needed for import
+    formatVSpec = '%d,%d,%d,%d\n';
+    formatCSpec = '%d,%d,%d,%d,%d,%d,%d,%d,%d\n';
+    formatRSpec = '%d,%d,%d,%d,%d\n';
+    formatLSpec = '%d,%d,%d,%d,%d,%d\n';
+    
+    fgetl(fileID);
+    %setting amount of Nodes from file
+    N = fscanf(fileID, '%d\n',1);
+    fgetl(fileID);
+    %setting amount of Vehicles from file
+    V = fscanf(fileID, '%d\n',1);
+    fgetl(fileID);
+    %reading the vehicle specifications from file
+    size_veh = [4,V];
+    vehicle_spec =  fscanf(fileID, formatVSpec, size_veh);
+    fgetl(fileID);
+    %reading the amount of calls from file
+    C = fscanf(fileID, '%d\n',1);
+    fgetl(fileID);
+    %importing calls per vehicle
+    veh_call = zeros(V,C+1);
+    for i= 1:V
+        var = fgetl(fileID);
+        var = var + ",";
+        numbers = sscanf(var,'%d,');
+        for j=1:length(numbers)
+            veh_call(i,j) = numbers(j);
+        end
     end
-end
-fgetl(fileID);
-%importing call specifications from file
-size_call = [9,C];
-call_spec =  fscanf(fileID, formatCSpec, size_call);
-fgetl(fileID);
-%importing routes
-size_rout = [5,Inf];
-route_spec = fscanf(fileID, formatRSpec, size_rout);
-fgetl(fileID);
-%importing load/loadoff specifications
-size_load = [6,Inf];
-load_spec = fscanf(fileID, formatLSpec, size_load);
-fgetl(fileID);
-
-%closing file
-fclose(fileID);
-
-%transpose imported data section
-vehicle_spec = vehicle_spec';
-call_spec = call_spec';
-route_spec = route_spec';
-load_spec = load_spec';
-
-%clearing memory
-clearvars -except vehicle_spec call_spec route_spec load_spec V C veh_call N
-%END OF IMPORT DATA SECTION
-%__________________________________________________________________________
-
-%__________________________________________________________________________
-%MAIN PROGRAM
-%running the program 10 times with different random seeds each time from
-%41-50
-
-results = zeros(1,16);
-
-%amount of seeds
-s=10;
-
-%timing the run;
-ttime = 0;
-
-%best solution
-best_sol = zeros(1,2*C+V);
-best_obj = 999999999;
-
-for j = 1:s
-    %choosing a seed for this run.
-    rng(40+j);
+    fgetl(fileID);
+    %importing call specifications from file
+    size_call = [9,C];
+    call_spec =  fscanf(fileID, formatCSpec, size_call);
+    fgetl(fileID);
+    %importing routes
+    size_rout = [5,Inf];
+    route_spec = fscanf(fileID, formatRSpec, size_rout);
+    fgetl(fileID);
+    %importing load/loadoff specifications
+    size_load = [6,Inf];
+    load_spec = fscanf(fileID, formatLSpec, size_load);
+    fgetl(fileID);
     
-    %creating the initial solution variables.
-    ini_sol = zeros(1,2*C+V);
-    ini_idx = 2*C+V;
-    new_sol = zeros(1,2*C+V);
+    %closing file
+    fclose(fileID);
     
-    n=10000;
+    %transpose imported data section
+    vehicle_spec = vehicle_spec';
+    call_spec = call_spec';
+    route_spec = route_spec';
+    load_spec = load_spec';
+    
+    %clearing memory
+    clearvars -except vehicle_spec call_spec route_spec load_spec V C veh_call N fileTable runs seed files f fileTable results fileNames
+    %END OF IMPORT DATA SECTION
+    %__________________________________________________________________________
+    
+    %__________________________________________________________________________
+    %MAIN PROGRAM
+    %running the program 10 times with different random seeds each time from
+    %41-50
     
     
-
-    %generating initial solution where dummy vehicle has all calls, assuming
-    %this solution is always feasible.
-    for i = C:-1:1
-        ini_sol(1,ini_idx) = i;
-        ini_sol(1,ini_idx-1) = i;
-        ini_idx = ini_idx - 2;
-    end
-    %calculating objective for initial solution
-    ini_obj = obj_func(ini_sol,vehicle_spec, route_spec, call_spec, load_spec, V, C, N);
-    %storing initial solution
-    results(1,1) = ini_obj;
-    %runnning 10 000 iterations to use random operators on the initial
-    %solution, 
-    tstart = tic;
-    for i = 1:n
-        %running the operator function with a random number using randi.
-        %always using one of 3 operator functions. Getting a new solution
-        %in return that i will then precede to check for feasibility
-        new_sol = operator(randi(5), ini_sol, C, V);
-        T0 = 1000000;
-        Tf = 1;
-        T=T0-i*((T0-Tf)/n);
+    
+     
+    %timing the run;
+    ttime = 0;
+    
+    %best solution
+    best_sol = zeros(1,2*C+V);
+    best_obj = 999999999;
+    
+    for j = 1:runs
+        %choosing a seed for this run.
+        rng(seed+j-1);
         
-        %running feasible check on new solution.
-        feas = feas_check(new_sol, veh_call, vehicle_spec, call_spec, route_spec, load_spec, C, V, N);
-        %if feasible, update initial solution
-        if(feas)
-            new_obj = obj_func(new_sol, vehicle_spec, route_spec, call_spec, load_spec, V, C, N);
-            if(new_obj < best_obj)
-                best_sol = new_sol;
-                best_obj = new_obj;
-            end                
-            if(new_obj < ini_obj)
-                ini_obj = new_obj;
-                ini_sol = new_sol;
-            else
-                x = rand;
-                p = exp((-(new_obj-ini_obj)/T));
-                if(rand<p)
-                    ini_sol = new_sol;
+        %creating the initial solution variables.
+        ini_sol = zeros(1,2*C+V);
+        ini_idx = 2*C+V;
+        new_sol = zeros(1,2*C+V);
+        
+        n=10000;
+        
+        
+        
+        %generating initial solution where dummy vehicle has all calls, assuming
+        %this solution is always feasible.
+        for i = C:-1:1
+            ini_sol(1,ini_idx) = i;
+            ini_sol(1,ini_idx-1) = i;
+            ini_idx = ini_idx - 2;
+        end
+        %calculating objective for initial solution
+        ini_obj = obj_func(ini_sol,vehicle_spec, route_spec, call_spec, load_spec, V, C, N);
+        %storing initial solution
+        results(f,1) = ini_obj;
+        %runnning 10 000 iterations to use random operators on the initial
+        %solution,
+        tstart = tic;
+        for i = 1:n
+            %running the operator function with a random number using randi.
+            %always using one of 3 operator functions. Getting a new solution
+            %in return that i will then precede to check for feasibility
+            new_sol = operator(randi(5), ini_sol, C, V);
+            T0 = 1000000;
+            Tf = 1;
+            T=T0-i*((T0-Tf)/n);
+            
+            %running feasible check on new solution.
+            feas = feas_check(new_sol, veh_call, vehicle_spec, call_spec, route_spec, load_spec, C, V, N);
+            %if feasible, update initial solution
+            if(feas)
+                new_obj = obj_func(new_sol, vehicle_spec, route_spec, call_spec, load_spec, V, C, N);
+                if(new_obj < best_obj)
+                    best_sol = new_sol;
+                    best_obj = new_obj;
+                end
+                if(new_obj < ini_obj)
                     ini_obj = new_obj;
+                    ini_sol = new_sol;
+                else
+                    x = rand;
+                    p = exp((-(new_obj-ini_obj)/T));
+                    if(rand<p)
+                        ini_sol = new_sol;
+                        ini_obj = new_obj;
+                    end
                 end
             end
-        end        
+        end
+        ttime = ttime + toc(tstart);
+        %storing result..
+        results(f,j+1) = best_obj;
+        
+        
     end
-    ttime = ttime + toc(tstart);
-    %storing result..
-    results(1,j+1) = best_obj;
     
+    %calculating average..
+    results(f,2+runs) = sum(results(f,2:runs+1))/runs;
+    
+    %storing average improvement
+    a(1,1:runs) = results(f,1);
+    b = results(f,2:runs+1);
+    results(f,3+runs) = ((a-b)/a)*100;
+    
+    %storing best run
+    results(f,4+runs) = min(results(f,2:runs+1));
+    
+    %storing best improvement
+    results(f,5+runs) = (results(f,1)-results(f,4+runs))/results(f,1)*100;
+    
+    %storing average time
+    results(f,6+runs) = ttime/runs;
+    
+    
+    %Print results to command window
+    header = {'initial
+    for p=1:6+runs
+        T = [T table(results(:,p))];
+    
+    
+    
+    clearvars -except vehicle_spec call_spec route_spec load_spec V C veh_call N ini_sol ini_obj results best_obj best_sol seed runs fileTable files fileNames
     
 end
-
-%calculating average..
-results(1,2+s) = sum(results(1,2:s+1))/s;
-
-%storing average improvement
-a(1,1:s) = results(1,1);
-b = results(1,2:s+1);
-results(1,3+s) = ((a-b)/a)*100;
-
-%storing best run
-results(1,4+s) = min(results(1,2:s+1));
-
-%storing best improvement
-results(1,5+s) = (results(1,1)-results(1,4+s))/results(1,1)*100;
-
-%storing average time
-results(1,6+s) = ttime/s;
-
-
-    
-    
-    
-    
-clearvars -except vehicle_spec call_spec route_spec load_spec V C veh_call N ini_sol ini_obj results best_obj best_sol
-
 %END OF MAIN PROGRAM
 %__________________________________________________________________________
 
@@ -174,21 +193,21 @@ clearvars -except vehicle_spec call_spec route_spec load_spec V C veh_call N ini
 %__________________________________________________________________________
 %OPERATOR SELECTION
 function o = operator(operator, ini_sol, C,V)
-    switch operator
-        case 1
-            new_sol = operator7(ini_sol, C, V);
-        case 2
-            new_sol = operator3(ini_sol, C, V);
-        case 3
-            new_sol = operator4(ini_sol, C, V);
-        case 4
-            new_sol = operator5(ini_sol, C, V);
-        case 5
-            new_sol = operator1(ini_sol,C,V);
-        otherwise
-            new_sol = 0;
-    end
-    o = new_sol;
+switch operator
+    case 1
+        new_sol = operator7(ini_sol, C, V);
+    case 2
+        new_sol = operator3(ini_sol, C, V);
+    case 3
+        new_sol = operator4(ini_sol, C, V);
+    case 4
+        new_sol = operator5(ini_sol, C, V);
+    case 5
+        new_sol = operator1(ini_sol,C,V);
+    otherwise
+        new_sol = 0;
+end
+o = new_sol;
 end
 
 %__________________________________________________________________________

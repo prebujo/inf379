@@ -7,7 +7,9 @@ formatCSpec = '%d,%d,%d,%d,%d,%d,%d,%d,%d\n';
 formatRSpec = '%d,%d,%d,%d,%d\n';
 formatLSpec = '%d,%d,%d,%d,%d,%d\n';
 
-fileID = fopen('Call_007_Vehicle_03.txt');
+fileTable(1,1) = fopen('Call_007_Vehicle_03.txt');
+
+fileID = fileTable(1,1);
 fgetl(fileID);
 %setting amount of Nodes from file
 N = fscanf(fileID, '%d\n',1);
