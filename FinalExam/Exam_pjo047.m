@@ -14,8 +14,9 @@ fileTable(1,5) = fopen(fileNames(5));
 %seed = 41;
 %runs = 10;
 
-files = 2;
+files = 4;
 results = zeros(files,runs+6);
+best_sol = zeros(files,300);
 
 for f = 1:files
     fileID = fileTable(1,f);
@@ -73,7 +74,7 @@ for f = 1:files
     load_spec = load_spec';
     
     %clearing memory
-    clearvars -except vehicle_spec call_spec route_spec load_spec V C veh_call N fileTable runs seed files f fileTable results fileNames
+    clearvars -except vehicle_spec call_spec route_spec load_spec V C veh_call N fileTable runs seed files f fileTable results fileNames best_sol
     %END OF IMPORT DATA SECTION
     %__________________________________________________________________________
     
@@ -88,11 +89,13 @@ for f = 1:files
     %timing the run;
     ttime = 0;
     
-    %best solution
-    best_sol = zeros(1,2*C+V);
-    best_obj = 999999999;
+     
     
     for j = 1:runs
+        %best objective is reset each run
+        best_obj = 9999999999;
+        
+        
         %choosing a seed for this run.
         rng(seed+j-1);
         
@@ -134,10 +137,12 @@ for f = 1:files
             if(feas)
                 new_obj = obj_func(new_sol, vehicle_spec, route_spec, call_spec, load_spec, V, C, N);
                 if(new_obj < best_obj)
-                    best_sol = new_sol;
+                    results(f,j+1) = new_obj;
+                    best_sol(f,1:length(new_sol)) = new_sol;
                     best_obj = new_obj;
                 end
                 if(new_obj < ini_obj)
+
                     ini_obj = new_obj;
                     ini_sol = new_sol;
                 else
@@ -152,7 +157,6 @@ for f = 1:files
         end
         ttime = ttime + toc(tstart);
         %storing result..
-        results(f,j+1) = best_obj;
         
         
     end
@@ -176,13 +180,13 @@ for f = 1:files
     
     
     %Print results to command window
-    header = {'initial
-    for p=1:6+runs
-        T = [T table(results(:,p))];
+    %header = {'initial
+    %for p=1:6+runs
+     %   T = [T table(results(:,p))];
     
     
     
-    clearvars -except vehicle_spec call_spec route_spec load_spec V C veh_call N ini_sol ini_obj results best_obj best_sol seed runs fileTable files fileNames
+    clearvars -except new_sol vehicle_spec call_spec route_spec load_spec V C veh_call N ini_sol ini_obj results best_obj best_sol seed runs fileTable files fileNames
     
 end
 %END OF MAIN PROGRAM
@@ -768,6 +772,182 @@ function o7 = operator7(ini_sol, C, V)
         end        
     end
     o7=new_sol;
+end
+
+
+
+%__________________________________________________________________________
+
+%__________________________________________________________________________
+% DUMMY INSERTION
+% Operator to move one random unassigned or (dummy) call from dummy vehicle to first 
+% fit on another vehicle. Operator finds the first fit of the call in a random
+% vehicle 
+
+function o1 = dum_ins(ini_sol, C, V)
+    idx = 2*C + V;
+    call_choice = 0;
+    veh = 1;
+    veh_idx = zeros(1,V);
+    veh_idx(1,1) = 1;
+    %choosing randomly a non zero call from the initial solution's dummy
+    %vehicle
+    for i=1:idx
+        if(veh == V+1)
+            call_choice = ini_sol(1,i - 1 + randi(idx - i+1));
+        end
+        call = ini_sol(1,i);
+        if(call == 0)
+            veh = veh + 1;
+            veh_idx(1,veh) = i+1;
+            continue;
+        end
+    end
+    
+    %if dummy vehicle was empty i perform a normal swap instead
+    if(call_choice == 0)
+        
+    else
+        new_sol = ini_sol;
+        marked = zeros(1,V);
+        %call_c_ptl = 
+        %call_c_ptu = 
+        while(sum(marked) < V)
+            veh = randi(V);
+            
+            
+        end
+      
+        
+        
+    end
+    
+    
+    
+    %the following section finds the vehicle belonging to the chosen call
+    veh_choice = 1;
+    for i = 1:idx
+        call = ini_sol(1,i);
+        if(call == call_choice)
+            break;
+        elseif(call == 0)
+            veh_choice = veh_choice +1;
+        end        
+    end
+    
+    %As all calls are assigned to dummy in initial solution I am not
+    %including dummy vehicle as an option here. This might lock possible
+    %solutions if i dont include other operators to move a route back to
+    %random, I will consider changing this. Since I could theoretically end up
+    %picking a call from a vehicle and moving it to itsself i am doing a 
+    %while loop until that is not the case. tatt med dummy også..
+    new_veh = veh_choice;
+    while(new_veh == veh_choice)
+        new_veh = randi(V+1);
+    end
+    
+    %generating new solution vector
+    new_sol = zeros(1,idx);
+    new_idx = 1;
+    curr_veh = 1;
+    opt_idx = 1;
+    opt = zeros(1,2);
+    opt(1) = call_choice;
+    i = 1;
+    while(i<=idx||new_idx<=idx)
+        if(curr_veh == new_veh)
+            if(i>idx)
+                call = 0;
+            else
+                call = ini_sol(1,i);
+            end
+            if(call == 0) %if the vehicle has no other calls,
+                new_sol(1,new_idx) = call_choice; % I will set the vehicle
+                new_sol(1,new_idx+1) = call_choice; %to pick up and deliver
+                new_idx = new_idx +3;  %the chosen call.
+                i = i +1; %and continue the loop through the initial solution
+                opt(1) = 0;
+                opt_idx = opt_idx-1;
+            else
+                opt_idx = opt_idx+1;
+                opt(opt_idx) = call;
+                choice_pickedup = 0;
+                while(opt_idx >0)
+                    choice = opt(1,randi(opt_idx));
+                    %0 is only possbile when I am done with chosen call
+                    if(choice == 0)
+                        choice = opt(2);
+                    end
+                    new_sol(1,new_idx) = choice;
+                    new_idx = new_idx+1;
+                    if(choice == call_choice)                 
+                        if(choice_pickedup)
+                            opt(1) = 0;
+                            opt_idx = opt_idx-1;
+                        else
+                            choice_pickedup = 1;
+                        end
+                    else
+                        i = i+1;
+                        if(i>idx)
+                            opt_idx = opt_idx-1;
+                            opt(2) = 0;                      
+                        elseif(ini_sol(1,i)==0)
+                            opt_idx = opt_idx -1;
+                            opt(2)=0;
+                        else
+                            opt(2) = ini_sol(1,i);
+                        end
+                    end
+                end
+            end
+            curr_veh = curr_veh+1;            
+        else
+            call = ini_sol(1,i);
+            if(call==0)
+                curr_veh = curr_veh +1;
+                new_idx = new_idx+1;
+            elseif(call~= call_choice)
+                new_sol(1,new_idx) = ini_sol(1,i);
+                new_idx = new_idx+1;
+            end
+            i = i+1;
+        end        
+    end
+    o1=new_sol;
+end
+
+
+%__________________________________________________________________________
+
+%___________________________
+%HELPING FUNCTIONS
+
+%________________________________
+%INSERT CALL
+%Inserts a call in the given vehicle starting index if it is possible
+
+function i = insert(call, idx, veh, ini_sol, veh_call, veh_spec, call_spec, V,C)
+new_sol = ini_sol;
+if(ismember(call,veh_call(veh,2:C+1)))
+    %assigning choices to array
+    choices = zeros(1,C);
+    choices(1,1) = call;
+    choices(1,2) = ini_sol(1,idx);
+    ch_idx = 3;
+    
+    %initializing boolean table to indicate pickup/delivery
+    is_picked = zeros(1,C);
+    %initializing pu ub tw for choices
+    t_ub_tw = zeros(1,C);
+    t_ub_tw(1,choices)
+    %time of vehicle
+    veh_t = veh_spec(veh,3);
+    
+else
+    new_sol = 0;
+end
+i = new_sol;
 end
 
 
