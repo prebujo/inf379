@@ -76,8 +76,8 @@ s=10;
 ttime = 0;
 
 %best solution
-best_sol = zeros(1,2*C+V);
-best_obj = 999999999;
+best_sol_overall = zeros(1,2*C+V);
+best_obj_overall = 999999999;
 
 for j = 1:s
     %choosing a seed for this run.
@@ -90,6 +90,9 @@ for j = 1:s
     
     n=10000;
     
+    %best solution
+    best_sol = zeros(1,2*C+V);
+    best_obj = 999999999;
     
 
     %generating initial solution where dummy vehicle has all calls, assuming
@@ -135,12 +138,15 @@ for j = 1:s
                     ini_obj = new_obj;
                 end
             end
+            
         end        
     end
     ttime = ttime + toc(tstart);
-    %storing result..
     results(1,j+1) = best_obj;
-    
+    if(best_obj < best_obj_overall)
+        best_obj_overall = best_obj;
+        best_sol_overall = best_sol;
+    end
     
 end
 
