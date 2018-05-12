@@ -14,7 +14,7 @@ fileTable(1,5) = fopen(fileNames(5));
 %seed = 41;
 %runs = 10;
 
-files = 5;
+files = 4;
 results = zeros(files,runs+6);
 best_sol_overall = zeros(files,300);
 
@@ -117,8 +117,8 @@ clearvars -except n best_sol_overall vehicle_spec call_spec route_spec load_spec
 ttime = 0;
 
 best_obj_overall=999999999;
-T0 = -(max(call_spec(:,5))-2*mean(route_spec(:,5))-mean(load_spec(:,4))-mean(load_spec(:,6)))/log(0.99);
-Tf = -1/log(0.01);
+T0 = (mean(call_spec(:,5))-;
+Tf = 1;
 
 for j = 1:runs
     %best objective is reset each run
@@ -157,9 +157,7 @@ for j = 1:runs
         operatorSel = randi(100);
         new_sol = operator(operatorSel, ini_sol, veh_call, vehicle_spec, call_spec, route_spec,load_spec, C,V, N);
         %setting T based on T0 and Tf and the current run over total runs
-        A = (T0-Tf)*(n+1)/n;
-        B = T0 - A;
-        T=A/(1+i) +B;
+        T=T0-i*((T0-Tf)/n);
 
         if(operatorSel>=60) %some operators do a feasibility check already.
             feas = 1;
@@ -242,13 +240,13 @@ disp(output);
 %OPERATOR SELECTION
 function o = operator(operator, ini_sol, veh_call, vehicle_spec, call_spec, route_spec,load_spec, C,V, N)
 if(operator <30)
-    new_sol = switcheroo(ini_sol, C, V);
+    new_sol = operator4(ini_sol, C, V);
 elseif(operator <60)
-    new_sol = exchange3(ini_sol, C, V);
-elseif(operator <=95)
-    new_sol = insertion(ini_sol, veh_call, vehicle_spec, call_spec, route_spec,load_spec, V,C,N);
+    new_sol = operator3(ini_sol, C, V);
+elseif(operator <=99)
+    new_sol = dum_ins(ini_sol, veh_call, vehicle_spec, call_spec, route_spec,load_spec, V,C,N);
 elseif(operator<=100)
-    new_sol = reinsertion_L(ini_sol, veh_call, vehicle_spec, call_spec, route_spec,load_spec, V,C,N);
+    new_sol = large_reins(ini_sol, veh_call, vehicle_spec, call_spec, route_spec,load_spec, V,C,N);
 end
 if(sum(new_sol) == 0)
     new_sol = ini_sol;
@@ -264,7 +262,7 @@ end
 % bigger leaps to avoid a search being stuck in one neighbourhood only
 % performing local search there without getting any further.
 
-function o1 = reinsertion_L(ini_sol, veh_call, vehicle_spec, call_spec, route_spec,load_spec, V,C,N)
+function o1 = large_reins(ini_sol, veh_call, vehicle_spec, call_spec, route_spec,load_spec, V,C,N)
 %calculating amount of calls to be removed and reinserted.
 amount = ceil(C/5);
 new_sol = ini_sol;
@@ -309,6 +307,63 @@ end
     o1=new_sol;
 end
 
+
+
+%__________________________________________________________________________
+%__________________________________________________________________________
+% SWAP - OPERATOR
+% Operator to make a swap for a vehicle with at least one pickup/delivery.
+
+function o2 = operator2(ini_sol, C, V)
+    %not including the dummy vehicle as it wont make any difference
+    %choosing randomly a vehicle.
+    veh_choice = randi(V);
+    veh = 1;
+    %the following section finds the vehicle belonging to the chosen call
+    i = 1;
+    %generating the new solution
+    new_sol = ini_sol;
+    while(i<2*C+V)
+        call = ini_sol(1,i);
+        if(veh == veh_choice)
+            %remembering starting index
+            idx = i-1;
+            %counting how many pickups/deliveries i have
+            count = 0;
+            while(call~=0)
+                count = count + 1;
+                i = i+1;
+                if(i>2*C+V)
+                    break;
+                end
+                call = ini_sol(1,i);
+            end
+            %if vehicle has some calls
+            if(count > 1)
+                choice1 = randi(count);
+                choice2 = choice1;
+                while(choice2 == choice1)
+                    choice2 = randi(count);
+                end
+                choice1 = choice1 + idx;
+                choice2 = choice2 + idx;
+                %i swap one random choice with another
+                new_sol(1,choice1) = new_sol(1,choice2);
+                new_sol(1,choice2) = ini_sol(1,choice1);
+            end
+            %done with swap, breaking out
+            break;
+        elseif(call == 0)
+            veh = veh +1;
+        end
+        i = i+1;
+    end
+
+    o2=new_sol;
+end
+
+
+
 %__________________________________________________________________________
 
 %__________________________________________________________________________
@@ -316,7 +371,7 @@ end
 %Operator to make a 3-exchange for a vehicle with at least two
 %pickup/deliveries
 
-function o3 = exchange3(ini_sol, C, V)
+function o3 = operator3(ini_sol, C, V)
     %not including the dummy vehicle as it wont make any difference
     %choosing randomly a vehicle.
     veh_choice = randi(V);
@@ -375,7 +430,7 @@ end
 %Operator to switch the pickup and delivery of one random call with
 %another random call.
 
-function o4 = switcheroo(ini_sol, C, V)
+function o4 = operator4(ini_sol, C, V)
 
     %choosing random calls to change, want always different calls
     call_choice1 = randi(C);
@@ -415,7 +470,7 @@ end
 % to insert a call into a vehicle. This operator always returns a feasible
 % solution.
 
-function d = insertion(ini_sol, veh_call, vehicle_spec, call_spec, route_spec,load_spec, V,C,N)
+function d = dum_ins(ini_sol, veh_call, vehicle_spec, call_spec, route_spec,load_spec, V,C,N)
     idx = 2*C + V;
     call_choice = 0;
     veh = 1;

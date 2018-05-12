@@ -430,3 +430,32 @@ function of = obj_func(route, vehicle_spec, route_spec, call_spec, load_spec, V,
     of = sol_c;
 end
 
+
+%Test to control objective function
+% sol = [12  4  12  4  3  3  0 15  5  5  15  1  17  17  1  0 11  16  16  11  10  9  10  9  0 6  6  8  7  8  7  2  2  0 18  14  18  14  0 13  13]
+% obj_s = obj_func(sol, vehicle_spec, route_spec, call_spec, load_spec, V, C, N)
+% obj=2495703
+% sol = [0 17 17 0 0 0 2 2 0 13 14 9 16 8 11 4 18 15 1 3 7 5 6 12 10 13 14 9 16 8 11 4 18 15 1 3 7 5 6 12 10]
+% obj_s = obj_func(sol, vehicle_spec, route_spec, call_spec, load_spec, V, C, N)
+% obj=8188131
+% sol = [1 1 0 8 8 0 0 0 14 14 0 3 18 13 10 6 5 11 9 15 17 4 16 2 7 12 3 18 13 10 6 5 11 9 15 17 4 16 2 7 12]
+% obj_s = obj_func(sol, vehicle_spec, route_spec, call_spec, load_spec, V, C, N)
+% obj=7409086
+% sol = [9 9 0 14 14 0 0 0 5 5 0 7 11 13 16 1 2 12 3 17 15 10 18 4 6 8 7 11 13 16 1 2 12 3 17 15 10 18 4 6 8]
+% obj_s = obj_func(sol, vehicle_spec, route_spec, call_spec, load_spec, V, C, N)
+% obj=7697599
+% sol = [0 0 8 8 0 0 7 7 0 17 14 11 16 12 5 9 2 3 10 1 4 15 18 13 6 17 14 11 16 12 5 9 2 3 10 1 4 15 18 13 6]
+% obj_s = obj_func(sol, vehicle_spec, route_spec, call_spec, load_spec, V, C, N)
+% obj=8078262
+% sol = [0 3 3 0 0 0 0 12 7 15 9 4 13 11 17 5 2 8 14 16 18 1 6 10 12 7 15 9 4 13 11 17 5 2 8 14 16 18 1 6 10]
+% obj_s = obj_func(sol, vehicle_spec, route_spec, call_spec, load_spec, V, C, N)
+% obj=8272668
+% sol = [0 0 4 4 0 12 12 14 14 0 7 7 0 1 2 13 8 3 5 10 15 18 11 16 9 17 6 1 2 13 8 3 5 10 15 18 11 16 9 17 6]
+% obj_s = obj_func(sol, vehicle_spec, route_spec, call_spec, load_spec, V, C, N)
+% obj=7084675
+% sol = [0 17 17 0 0 0 0 3 1 11 18 8 5 10 6 7 15 9 12 2 13 16 14 4 3 1 11 18 8 5 10 6 7 15 9 12 2 13 16 14 4]
+% obj_s = obj_func(sol, vehicle_spec, route_spec, call_spec, load_spec, V, C, N)
+% obj=8532100
+% sol = [2 2 0 11 11 0 0 18 18 0 1 1 0 8 16 8 14 13 13 16 14 17 17 9 10 10 3 3 5 9 6 5 15 6 15 7 4 12 4 7 12]
+% obj_s = obj_func(sol, vehicle_spec, route_spec, call_spec, load_spec, V, C, N)
+% Obj=7568831
