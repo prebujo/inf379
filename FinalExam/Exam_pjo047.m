@@ -10,10 +10,6 @@ fileTable(1,3) = fopen(fileNames(3));
 fileTable(1,4) = fopen(fileNames(4));
 fileTable(1,5) = fopen(fileNames(5));
 
-%starting seed and amount of runs (all using different seeds)
-%seed = 41;
-%runs = 10;
-
 files = 5;
 results = zeros(files,runs+6);
 best_sol_overall = zeros(files,300);
@@ -42,12 +38,12 @@ C = fscanf(fileID, '%d\n',1);
 fgetl(fileID);
 %importing calls per vehicle
 veh_call = zeros(V,C+1);
-for i= 1:V
+for s= 1:V
     var = fgetl(fileID);
     var = var + ",";
     numbers = sscanf(var,'%d,');
     for j=1:length(numbers)
-        veh_call(i,j) = numbers(j);
+        veh_call(s,j) = numbers(j);
     end
 end
 fgetl(fileID);
@@ -74,122 +70,122 @@ route_spec = route_spec';
 load_spec = load_spec';
 
 %clearing memory
-clearvars -except n best_sol_overall vehicle_spec call_spec route_spec load_spec V C veh_call N fileTable runs seed files f fileTable results fileNames best_sol
+clearvars -except n iter best_sol_overall vehicle_spec call_spec route_spec load_spec V C veh_call N fileTable runs seed files f fileTable results fileNames best_sol
 %END OF IMPORT DATA SECTION
 %__________________________________________________________________________
 
 %__________________________________________________________________________
-%MAIN PROGRAM
-%running the program a given amount of times (given by the "runs" variable) with different random seeds each time from
-%starting from a given "seed" variable.
+% MAIN PROGRAM
+% running the program a given amount of times (given by the "runs" variable)
+% with different random seeds each time, starting from a 
+% given "seed" variable. The variable "iter" must also be given to
+% determine the amount of iterations. The Cooling schedule is automatically 
+% assigned from that.
 
-% sol = [18,4,18,4,3,3,0,15,5,15,17,1,1,17,5,0,16,11,16,11,10,10,9,9,0,12,14,12,14,2,2,0,6,6,8,7,8,7,0,13,13];
-% sol = rem_call(12, sol, V,C);
-% sol = rem_call(18, sol, V,C);
-% sol = ins_co(12, 1, sol, veh_call, vehicle_spec, call_spec, route_spec, load_spec, V,C,N);
-% sol = rem_call(15,sol,V,C);
-% sol = rem_call(5,sol,V,C);
-% sol = rem_call(17,sol,V,C);
-% sol = rem_call(1,sol,V,C);
-% sol = ins_co(15, 2, sol, veh_call, vehicle_spec, call_spec, route_spec, load_spec, V,C,N);
-% sol = ins_co(5, 2, sol, veh_call, vehicle_spec, call_spec, route_spec, load_spec, V,C,N);
-% sol = ins_co(1, 2, sol, veh_call, vehicle_spec, call_spec, route_spec, load_spec, V,C,N);
-% sol = ins_co(17, 2, sol, veh_call, vehicle_spec, call_spec, route_spec, load_spec, V,C,N)
-% sol = rem_call(16,sol,V,C);
-% sol = rem_call(11,sol,V,C);
-% sol = rem_call(10,sol,V,C);
-% sol = rem_call(9,sol,V,C);
-% sol = ins_co(16, 3, sol, veh_call, vehicle_spec, call_spec, route_spec, load_spec, V,C,N);
-% sol = ins_co(11, 3, sol, veh_call, vehicle_spec, call_spec, route_spec, load_spec, V,C,N);
-% sol = ins_co(10, 3, sol, veh_call, vehicle_spec, call_spec, route_spec, load_spec, V,C,N);
-% sol = ins_co(9, 3, sol, veh_call, vehicle_spec, call_spec, route_spec, load_spec, V,C,N)
-% obj_s = obj_func(sol, vehicle_spec, route_spec, call_spec, load_spec, V, C, N)
-% sol = rem_call(18,sol,V,C);
-% 
-% 
-% 
-% 
-% sol3 = [12,4,12,4,3,3,0,15,5,5,15,1,17,17,1,0,11,16,16,11,10,9,10,9,0,14,14,2,2,0,6,6,8,7,8,7,0,13,13,18,18];
-% obj_s = obj_func(sol3, vehicle_spec, route_spec, call_spec, load_spec, V, C, N)
-
-
-%timing the run;
+%timing the runs, start time 0;
 ttime = 0;
 
+%best overall obj variable
 best_obj_overall=999999999;
+
+%initializing T0 and Tf before starting the runs as they are the same for
+%all runs.
 T0 = -(max(call_spec(:,5))-2*mean(route_spec(:,5))-mean(load_spec(:,4))-mean(load_spec(:,6)))/log(0.99);
 Tf = -1/log(0.01);
 
 for j = 1:runs
-    %best objective is reset each run
-    best_obj = 9999999999;
-    best_sol = zeros(1,2*C+V);
 
     %choosing a seed for this run.
     rng(seed+j-1);
 
     %creating the initial solution variables.
-    ini_sol = zeros(1,2*C+V);
+    cur_sol = zeros(1,2*C+V);
     ini_idx = 2*C+V;
     new_sol = zeros(1,2*C+V);
 
     %generating initial solution where dummy vehicle has all calls, assuming
     %this solution is always feasible.
-    for i = C:-1:1
-        ini_sol(1,ini_idx) = i;
-        ini_sol(1,ini_idx-1) = i;
+    for s = C:-1:1
+        cur_sol(1,ini_idx) = s;
+        cur_sol(1,ini_idx-1) = s;
         ini_idx = ini_idx - 2;
     end
     %calculating objective for initial solution
-    ini_obj = obj_func(ini_sol,vehicle_spec, route_spec, call_spec, load_spec, V, C, N);
-    %storing initial solution
-    results(f,runs+1) = ini_obj;
-    %initiating the T0 and Tf to determine Cooling schedule
+    cur_obj = obj_func(cur_sol,vehicle_spec, route_spec, call_spec, load_spec, V, C, N);
     
-    %runnning 20 000 iterations to use random operators on the initial
-    %solution,
+    %best objective and best solution is equal to initial solution
+    best_obj = cur_obj;
+    best_sol = cur_sol;
+    
+    %storing initial solution
+    results(f,runs+1) = cur_obj;
+    
+    %initializing T0 before starting Simulated Annealing algorithm.
+    T=T0;
+    %Cooling schedule amounts
+    n = iter/4;
+    i = 0;
+    %exponantial cooling schedule parameters
+    A = (T0-Tf)*(n+1)/n;
+    B = T0 - A;
+    
+    %initializing max iterations per temperature. will always amount to
+    %what I devide n on above. total amount of iterations is given by the
+    %"iter" variable that the user determines. Total iterations is
+    %therefore max_it * n = iter
+    max_it = iter/n;
+    
+    %stating timer before first iteration
     tstart = tic;
-    for i = 1:n
-        %running the operator function with a random number using randi.
-        %always using one of 4 operator functions based on probability. 
-        %Getting a new solution in return that i will then precede to check
-        %for feasibility if the operator needs that
-        operatorSel = randi(100);
-        new_sol = operator(operatorSel, ini_sol, veh_call, vehicle_spec, call_spec, route_spec,load_spec, C,V, N);
-        %setting T based on T0 and Tf and the current run over total runs
-        A = (T0-Tf)*(n+1)/n;
-        B = T0 - A;
-        T=A/(1+i) +B;
-
-        if(operatorSel>=60) %some operators do a feasibility check already.
-            feas = 1;
-        else
-            %running feasible check on new solution if operator is not taking care of it.
-            feas = feas_check(new_sol, veh_call, vehicle_spec, call_spec, route_spec, load_spec, C, V, N);
-        end
-        %if feasible, update initial solution
-        if(feas)
-            new_obj = obj_func(new_sol, vehicle_spec, route_spec, call_spec, load_spec, V, C, N);
-            if(new_obj < best_obj)
-                best_sol = new_sol;
-                best_obj = new_obj;
-            end
-            if(new_obj < ini_obj)
-                ini_obj = new_obj;
-                ini_sol = new_sol;
+    
+    %Simulated Annealing Algorithm 
+    while(T>Tf)
+        
+        for s = 1:max_it
+            %running the operator function with a random number using randi.
+            %always using one of 4 operator functions based on probability.
+            %Getting a new solution in return that i will then precede to check
+            %for feasibility if the operator needs that
+            operatorSel = randi(100);
+            new_sol = operator(operatorSel, cur_sol, veh_call, vehicle_spec, call_spec, route_spec,load_spec, C,V, N);
+            %setting T based on T0 and Tf and the current run over total runs
+            
+            
+            if(operatorSel>=60) %some operators do a feasibility check already.
+                feas = 1;
             else
-                x = rand;
-                p = exp((-(new_obj-ini_obj)/T));
-                if(rand<p)
-                    ini_sol = new_sol;
-                    ini_obj = new_obj;
+                %running feasible check on new solution if operator is not taking care of it.
+                feas = feas_check(new_sol, veh_call, vehicle_spec, call_spec, route_spec, load_spec, C, V, N);
+            end
+            %if feasible, update initial solution
+            if(feas)
+                new_obj = obj_func(new_sol, vehicle_spec, route_spec, call_spec, load_spec, V, C, N);
+                if(new_obj < best_obj)
+                    best_sol = new_sol;
+                    best_obj = new_obj;
+                end
+                if(new_obj < cur_obj)
+                    cur_obj = new_obj;
+                    cur_sol = new_sol;
+                else
+                    x = rand;
+                    p = exp((-(new_obj-cur_obj)/T));
+                    if(rand<p)
+                        cur_sol = new_sol;
+                        cur_obj = new_obj;
+                    end
                 end
             end
+            
         end
-
+        %updating 
+        i = i+1;
+        T=A/(1+i) +B;
     end
+    %taking the end time of each run..
     ttime = ttime + toc(tstart);
-    %storing result..
+    
+    %storing results of best solution from run and best overall solution..
     results(f,j) = best_obj;
     if(best_obj < best_obj_overall)
         best_obj_overall = best_obj;
@@ -197,6 +193,7 @@ for j = 1:runs
     end
 end
 
+%UPDATING RESULT TABLE
 %calculating average..
 results(f,2+runs) = sum(results(f,1:runs))/runs;
 
@@ -214,11 +211,11 @@ results(f,5+runs) = (results(f,runs+1)-results(f,4+runs))/results(f,runs+1)*100;
 %storing average time
 results(f,6+runs) = ttime/runs;
 
-clearvars -except T0 Tf n best_sol_overall best_obj_overall new_sol vehicle_spec call_spec route_spec load_spec V C veh_call N ini_sol ini_obj results best_obj best_sol seed runs fileTable files fileNames
+clearvars -except T0 Tf iter n best_sol_overall best_obj_overall new_sol vehicle_spec call_spec route_spec load_spec V C veh_call N ini_sol ini_obj results best_obj best_sol seed runs fileTable files fileNames
 
 end
 
-%Print results to command window
+%PRINT RESULTS to command window
 header = {'Inst'};
 for h=1:runs
     run = sprintf('Run_%d',h);
@@ -239,7 +236,9 @@ disp(output);
 %__________________________________________________________________________
 %FUNCTIONS SECTION
 %__________________________________________________________________________
-%OPERATOR SELECTION
+%OPERATOR PICKER
+% Decides according to a given "operator" which operator should be chosen
+% The probability of each operator is controlled here.
 function o = operator(operator, ini_sol, veh_call, vehicle_spec, call_spec, route_spec,load_spec, C,V, N)
 if(operator <30)
     new_sol = switcheroo(ini_sol, C, V);
@@ -257,7 +256,7 @@ o = new_sol;
 end
 
 %__________________________________________________________________________
-% LARGE RE-INSERT - OPERATOR
+% RE-INSERT - LARGE OPERATOR
 % Operator to remove and reinsert a large amount of calls into random
 % vehicles. This operator relies on the remove and insertion operators and
 % should not be performed very often. This operator is designed to make
@@ -293,7 +292,7 @@ for j=1:amount
         ins_sol = ins_co(call, veh, new_sol,veh_call, vehicle_spec, call_spec, route_spec,load_spec, V,C,N);
         %if it didnt work try greedy way
         if(sum(ins_sol) == 0)
-            ins_sol = ins_gr(call, veh, new_sol,veh_call, vehicle_spec, call_spec, route_spec,load_spec, V,C,N);
+            ins_sol = ins_fit(call, veh, new_sol,veh_call, vehicle_spec, call_spec, route_spec,load_spec, V,C,N);
         end
         marked(1,veh) = 1;
     end
@@ -312,7 +311,7 @@ end
 %__________________________________________________________________________
 
 %__________________________________________________________________________
-%OPERATOR 3 - 3-Exchange
+% 3-Exchange OPERATOR
 %Operator to make a 3-exchange for a vehicle with at least two
 %pickup/deliveries
 
@@ -371,7 +370,7 @@ end
 %__________________________________________________________________________
 
 %__________________________________________________________________________
-%OPERATOR 4 - SWITCHEROO
+%SWITCHEROO OPERATOR
 %Operator to switch the pickup and delivery of one random call with
 %another random call.
 
@@ -405,13 +404,13 @@ end
 %__________________________________________________________________________
 
 %__________________________________________________________________________
-% DUMMY INSERTION
-% Operator to move one random unassigned or (dummy) call from dummy vehicle
-% to first/bestfit on another vehicle. Operator selects a call from dummy
+% BEST/FIRST FIT INSERTION
+% Operator to move one random unassigned or (dummy) callto first/bestfit on
+% another randomly selected vehicle. Operator selects a call from dummy
 % vehicle ie. not assigned vehicle and tries to insert it into a random
 % vehicle. The operator uses two different ways of inserting the call in
-% the new vehicle, one that tries to be cost efficient but doesnt always
-% return valid solutions and a greedy one which is more likely to be able
+% the new vehicle, one that tries to be cost efficient, ie. best fit, but 
+% doesnt always return a valid solution and a greedy one which is more likely to be able
 % to insert a call into a vehicle. This operator always returns a feasible
 % solution.
 
@@ -448,7 +447,7 @@ function d = insertion(ini_sol, veh_call, vehicle_spec, call_spec, route_spec,lo
             new_sol = ins_co(call_choice, veh, rem_sol,veh_call, vehicle_spec, call_spec, route_spec,load_spec, V,C,N);
             %if it didnt work try greedy way
             if(sum(new_sol) == 0)
-                new_sol = ins_gr(call_choice, veh, rem_sol,veh_call, vehicle_spec, call_spec, route_spec,load_spec, V,C,N);
+                new_sol = ins_fit(call_choice, veh, rem_sol,veh_call, vehicle_spec, call_spec, route_spec,load_spec, V,C,N);
             end
             marked(1,veh) = 1;
         end
@@ -464,7 +463,7 @@ function d = insertion(ini_sol, veh_call, vehicle_spec, call_spec, route_spec,lo
             new_sol = ins_co(call_choice, veh, ini_sol,veh_call, vehicle_spec, call_spec, route_spec,load_spec, V,C,N);
             %if it didnt work try greedy way
             if(sum(new_sol) == 0)
-                new_sol = ins_gr(call_choice, veh, ini_sol,veh_call, vehicle_spec, call_spec, route_spec,load_spec, V,C,N);
+                new_sol = ins_fit(call_choice, veh, ini_sol,veh_call, vehicle_spec, call_spec, route_spec,load_spec, V,C,N);
             end
             marked(1,veh) = 1;
         end
@@ -497,14 +496,14 @@ function r = rem_call(call,ini_sol, V, C)
 end
 
 %__________________________________________________________________________
-%INSERT CALL GREEDY
+%INSERT CALL FIRST FIT
 %Inserts a call in the given vehicles schedule starting at idx if it is possible
 %insertion of calls are based on all feasibility checks, size, time window
 %and if veh can pickup call ie returns always a feasible solution or 0.
-%Based on a greedy principle where the call that needs to be
+%Based on a first fit type of principle where the call that needs to be
 %delivered/picked up first is chosen.
 
-function i = ins_gr(call, veh, ini_sol, veh_call, veh_spec, call_spec, route_spec, load_spec, V,C,N)
+function i = ins_fit(call, veh, ini_sol, veh_call, veh_spec, call_spec, route_spec, load_spec, V,C,N)
     new_sol = zeros(1,2*C+V);
     new_idx = 1;
     %first finding the location of the vehicle in the given solution
@@ -671,7 +670,7 @@ end
 %__________________________________________________________________________
 % INSERT LOWEST COST
 % This insert function give less often feasible solutions as greedy insert
-% but it might find solutions that the greedy solution does not. It uses
+% but it might find solutions that the first fit solution does not. It uses
 % the "time" variable to insert calls in a given vehicles schedule based on
 % the minimum "time" or cost it is to the next node (either the inserted
 % node or the original node). the cost is based on time and not the actual
